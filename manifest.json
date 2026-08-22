@@ -1,0 +1,16 @@
+{
+  "domain": "portainer_update_manager",
+  "name": "Portainer Update Manager",
+  "codeowners": [
+    "@markxroberts"
+  ],
+  "config_flow": true,
+  "dependencies": [
+    "portainer"
+  ],
+  "documentation": "https://github.com/markxroberts/portainer-update-manager",
+  "integration_type": "service",
+  "iot_class": "local_push",
+  "requirements": [],
+  "version": "0.5.2"
+}

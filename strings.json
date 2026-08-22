@@ -1,0 +1,97 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "no_available_portainer_entries": "No unconfigured Portainer instances are available. Add the native Portainer integration first, or remove the existing manager entry for that instance.",
+      "portainer_entry_missing": "The selected Portainer config entry no longer exists.",
+      "reauth_successful": "The Docker Event Bridge token was updated.",
+      "reconfigure_successful": "The Docker Event Bridge connection was updated."
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the Docker Event Bridge.",
+      "invalid_auth": "The Docker Event Bridge rejected the bearer token.",
+      "invalid_response": "The service responded, but it is not a compatible Docker Event Bridge."
+    },
+    "step": {
+      "user": {
+        "title": "Configure Portainer Update Manager",
+        "description": "Select the native Portainer integration and its Docker Event Bridge. Portainer remains responsible for container control and image installation; the bridge supplies read-only, instant Docker events.",
+        "data": {
+          "portainer_entry_id": "Portainer instance",
+          "bridge_url": "Docker Event Bridge URL",
+          "bridge_token": "Bridge bearer token",
+          "verify_ssl": "Verify TLS certificate",
+          "scan_interval": "Policy and fallback snapshot interval",
+          "update_delay_hours": "Delay after an update is first seen",
+          "window_start": "Maintenance window start",
+          "window_end": "Maintenance window end"
+        },
+        "data_description": {
+          "bridge_url": "For example, http://192.168.1.20:9177 or an HTTPS reverse-proxy URL.",
+          "bridge_token": "The BRIDGE_TOKEN configured in the bridge container.",
+          "verify_ssl": "Disable only for a trusted local endpoint using a self-signed certificate.",
+          "scan_interval": "How often to evaluate update policy and refresh the bridge snapshot if no push event arrives.",
+          "update_delay_hours": "Wait this many hours before an available update becomes eligible for automatic installation.",
+          "window_start": "Start of the daily automatic-update window. Equal start and end times allow updates all day.",
+          "window_end": "End of the daily automatic-update window. Windows may cross midnight."
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Docker Event Bridge",
+        "description": "Change the bridge URL, token, or TLS verification without losing per-container automatic-update settings.",
+        "data": {
+          "bridge_url": "Docker Event Bridge URL",
+          "bridge_token": "Bridge bearer token",
+          "verify_ssl": "Verify TLS certificate"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Update Docker Event Bridge token",
+        "description": "Enter the current BRIDGE_TOKEN from the bridge container.",
+        "data": {
+          "bridge_token": "Bridge bearer token"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Update policy",
+        "data": {
+          "scan_interval": "Policy and fallback snapshot interval",
+          "update_delay_hours": "Delay after an update is first seen",
+          "window_start": "Maintenance window start",
+          "window_end": "Maintenance window end"
+        },
+        "data_description": {
+          "scan_interval": "How often to evaluate update policy and refresh the bridge snapshot if no push event arrives.",
+          "update_delay_hours": "Wait this many hours before an available update becomes eligible for automatic installation.",
+          "window_start": "Start of the daily automatic-update window. Equal start and end times allow updates all day.",
+          "window_end": "End of the daily automatic-update window. Windows may cross midnight."
+        }
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "bridge_connected": {
+        "name": "Docker Event Bridge connected"
+      }
+    },
+    "sensor": {
+      "container_count": {
+        "name": "Containers"
+      },
+      "pending_updates": {
+        "name": "Pending updates"
+      },
+      "automatic_updates_enabled": {
+        "name": "Automatic updates enabled"
+      },
+      "eligible_updates": {
+        "name": "Eligible updates"
+      }
+    }
+  }
+}
