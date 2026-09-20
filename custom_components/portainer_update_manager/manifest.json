@@ -6,11 +6,13 @@
   ],
   "config_flow": true,
   "dependencies": [
+    "logbook",
     "portainer"
   ],
-  "documentation": "https://github.com/markxroberts/portainer-update-manager",
+  "documentation": "https://github.com/markxroberts/portainer_update_manager",
   "integration_type": "service",
   "iot_class": "local_push",
   "requirements": [],
-  "version": "0.5.2"
+  "version": "0.5.3",
+  "issue_tracker": "https://github.com/markxroberts/portainer_update_manager/issues"
 }

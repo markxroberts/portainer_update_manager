@@ -21,5 +21,5 @@ class PortainerUpdateManagerEntity(CoordinatorEntity[PortainerUpdateCoordinator]
             manufacturer="Home Assistant Community",
             model="Portainer update and Docker event manager",
             entry_type=DeviceEntryType.SERVICE,
-            sw_version="0.5.2",
+            sw_version="0.5.3",
         )

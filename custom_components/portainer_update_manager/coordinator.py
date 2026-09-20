@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 import logging
 from typing import Any, override
 
+from homeassistant.components import logbook
 from homeassistant.components.update import (
     ATTR_IN_PROGRESS,
     ATTR_INSTALLED_VERSION,
@@ -556,19 +557,30 @@ class PortainerUpdateCoordinator(DataUpdateCoordinator[CoordinatorData]):
         message_type = message.get("type")
         if message_type == "hello":
             if self.data is not None:
-                self.async_set_updated_data(
-                    CoordinatorData(
-                        updates=self.data.updates,
-                        containers=self.data.containers,
-                        bridge_configured=True,
-                        bridge_connected=bool(message.get("docker_connected", False)),
-                        bridge_version=(
-                            str(message["version"]) if message.get("version") else None
-                        ),
-                        bridge_error=None,
-                        last_event=self.data.last_event,
-                    )
+                connected = bool(message.get("docker_connected", False))
+                version = (
+                    str(message["version"]) if message.get("version") else None
                 )
+                # async_set_updated_data() resets a polling coordinator's refresh
+                # interval. The bridge sends regular keepalives, so only publish a
+                # hello update when it actually changes entity-visible state.
+                if (
+                    self.data.bridge_configured is not True
+                    or self.data.bridge_connected != connected
+                    or self.data.bridge_version != version
+                    or self.data.bridge_error is not None
+                ):
+                    self.async_set_updated_data(
+                        CoordinatorData(
+                            updates=self.data.updates,
+                            containers=self.data.containers,
+                            bridge_configured=True,
+                            bridge_connected=connected,
+                            bridge_version=version,
+                            bridge_error=None,
+                            last_event=self.data.last_event,
+                        )
+                    )
             return
         if message_type == "status":
             await self._async_set_bridge_status(
@@ -638,6 +650,15 @@ class PortainerUpdateCoordinator(DataUpdateCoordinator[CoordinatorData]):
         self, connected: bool, error: str | None
     ) -> None:
         if self.data is None:
+            return
+        # The bridge sends a status keepalive every 30 seconds. Calling
+        # async_set_updated_data() for an unchanged keepalive would reset the
+        # DataUpdateCoordinator polling timer every 30 seconds and prevent the
+        # configured policy scan from ever running.
+        if (
+            self.data.bridge_connected == connected
+            and self.data.bridge_error == error
+        ):
             return
         self.async_set_updated_data(
             CoordinatorData(
@@ -772,7 +793,11 @@ class PortainerUpdateCoordinator(DataUpdateCoordinator[CoordinatorData]):
         if candidate is None:
             return
 
-        self._install_task = self.config_entry.async_create_task(
+        _LOGGER.info(
+            "Automatic update eligible for %s; scheduling installation",
+            candidate.entity_id,
+        )
+        self._install_task = self.config_entry.async_create_background_task(
             self.hass,
             self._async_install(candidate),
             f"{DOMAIN}_install_{candidate.entity_id}",
@@ -788,6 +813,19 @@ class PortainerUpdateCoordinator(DataUpdateCoordinator[CoordinatorData]):
         self._last_result[item.key] = "in_progress"
         await self._async_save()
 
+        _LOGGER.info(
+            "Starting automatic update for %s (%s)",
+            item.entity_id,
+            item.latest_version or "unknown version",
+        )
+        logbook.async_log_entry(
+            self.hass,
+            "Portainer Update Manager",
+            f"Starting automatic update for {item.name}",
+            domain=DOMAIN,
+            entity_id=item.entity_id,
+        )
+
         try:
             await self.hass.services.async_call(
                 UPDATE_DOMAIN,
@@ -798,13 +836,35 @@ class PortainerUpdateCoordinator(DataUpdateCoordinator[CoordinatorData]):
         except (HomeAssistantError, TimeoutError) as err:
             _LOGGER.error("Automatic update failed for %s: %s", item.entity_id, err)
             self._last_result[item.key] = f"{RESULT_FAILED}: {err}"
+            logbook.async_log_entry(
+                self.hass,
+                "Portainer Update Manager",
+                f"Automatic update failed for {item.name}: {err}",
+                domain=DOMAIN,
+                entity_id=item.entity_id,
+            )
         except Exception as err:  # noqa: BLE001
             _LOGGER.exception(
                 "Unexpected automatic-update failure for %s", item.entity_id
             )
             self._last_result[item.key] = f"{RESULT_FAILED}: {err}"
+            logbook.async_log_entry(
+                self.hass,
+                "Portainer Update Manager",
+                f"Automatic update failed for {item.name}: {err}",
+                domain=DOMAIN,
+                entity_id=item.entity_id,
+            )
         else:
             self._last_result[item.key] = RESULT_SUCCESS
+            _LOGGER.info("Automatic update completed for %s", item.entity_id)
+            logbook.async_log_entry(
+                self.hass,
+                "Portainer Update Manager",
+                f"Automatic update completed for {item.name}",
+                domain=DOMAIN,
+                entity_id=item.entity_id,
+            )
         finally:
             await self._async_save()
             self._install_task = None
